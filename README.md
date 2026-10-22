@@ -38,3 +38,12 @@ pytest -q
 4. **v0.4:** C ABI, code generation and cross-backend consistency tests.
 
 See `docs/index.qmd` for the design overview.
+
+## v0.2 development additions
+
+See [architecture decision record](docs/architecture-v0.2.md). The Maple
+package in `maple/ModelCore.mpl` is an **untested prototype**, not a verified
+Maple release. Python IR streaming and derivative capability contracts are
+implemented in `src/modelcore/ir.py` and `src/modelcore/derivatives.py`.
+
+Run tests with `PYTHONPATH=src python -m pytest -q` after installing dependencies.
