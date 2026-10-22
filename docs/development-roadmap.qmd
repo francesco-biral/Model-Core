@@ -1,0 +1,131 @@
+---
+title: "Model-Core — Development Roadmap"
+subtitle: "Implementation status, milestones and acceptance criteria"
+format:
+  html:
+    toc: true
+    number-sections: true
+    code-copy: true
+execute:
+  eval: false
+---
+
+> **Baseline:** v0.2 development prototype, reviewed on 2026-10-22. Status labels refer to inspected source files, not to a production release. Test execution in this document is not a substitute for rerunning tests in the local development environment.
+
+# Status vocabulary
+
+- **Implemented:** corresponding source exists; verify tests before release.
+- **Prototype / unverified:** preliminary code exists, but the target environment has not validated it.
+- **Planned:** interface or design exists, but implementation is missing.
+
+# Current implementation inventory
+
+| Area | Status | Evidence / limitations |
+|---|---|---|
+| Manifest schema | Implemented baseline | `schema/model.schema.json` |
+| Manifest validation and inspection CLI | Implemented baseline | `src/modelcore/validation.py`, `cli.py` |
+| Bicycle, tyre and multibody example manifests | Implemented examples | Metadata examples; not executable models |
+| Streaming JSONL IR transport | Implemented utility | `src/modelcore/ir.py`; no full symbolic AST |
+| Derivative capability contracts | Implemented utility | `src/modelcore/derivatives.py`; no derivative synthesis |
+| Maple model descriptor and residual normalization | Prototype / unverified | `maple/ModelCore.mpl`; requires Maple execution |
+| Maple `UserFunction` registry | Planned | Scalar/vector signatures and modes not yet implemented |
+| Maple symbolic derivative generation | Planned | No sparse Jacobian/Hessian generator yet |
+| Maple code generation | Planned | No verified standalone C/C++ generation |
+| Mathematica frontend | Planned | Placeholder only |
+| Numerical C/C++ runtime | Planned | Placeholder only |
+| Full model package and build lockfile | Planned | No production pipeline |
+
+# Milestone M0 — Consolidate and validate the baseline
+
+**Goal:** Establish a trustworthy starting point in the local repository.
+
+- [ ] Install development dependencies and run `python -m pytest -q`.
+- [ ] Review schema examples and CLI behavior.
+- [ ] Run `maple/ModelCore.mpl` in a supported Maple version; document version and issues.
+- [ ] Resolve any discrepancies between package version, documentation and implemented features.
+- [ ] Add Quarto project configuration if multi-page website navigation is desired.
+
+**Acceptance:** Python tests pass; Maple prototype status is accurately documented; no unverified functionality is advertised as production-ready.
+
+# Milestone M1 — Maple Model object and validation
+
+**Goal:** Support the established authoring convention without rewriting models.
+
+- [ ] Finalize constructor accepting `xvars`, `uvars`, `pvars`, `usr_funcs`, `ode_eqns`, time and metadata.
+- [ ] Preserve ordered declarations and original equations.
+- [ ] Normalize explicit and implicit first-order equations to residuals.
+- [ ] Validate time-dependent states/inputs, duplicates, derivative order, undeclared symbols and equation dimensions.
+- [ ] Add Maple examples and executable tests for explicit and implicit ODEs.
+
+**Acceptance:** Representative first-order models validate and export reproducible descriptors without solving for state derivatives.
+
+# Milestone M2 — UserFunction registry
+
+**Goal:** Register reusable symbolic, external and hybrid functions.
+
+- [ ] Define ordered scalar/vector argument and output signatures, dimensions and units.
+- [ ] Store symbolic bodies separately from public interfaces.
+- [ ] Support external symbol/library declarations and optional derivative interfaces.
+- [ ] Define standalone generation as the default for symbolic user functions.
+- [ ] Validate dependency graphs and detect missing or circular dependencies.
+- [ ] Test multi-output tyre and suspension examples.
+
+**Acceptance:** The same function signature can describe symbolic, external and hybrid implementations; unresolved external dependencies are reported explicitly.
+
+# Milestone M3 — Robust IR export
+
+**Goal:** Connect Maple exports to the Python IR/manifest tools.
+
+- [ ] Specify stable schema versions and JSON encoding of model metadata.
+- [ ] Stream equation records in bounded chunks; preserve ordering and integrity hashes.
+- [ ] Validate shape, references, declared functions and parameter metadata.
+- [ ] Define an extensible representation for symbolic expressions without forcing full expansion.
+- [ ] Benchmark thousands of nonlinear equations and measure peak memory usage.
+
+**Acceptance:** Large model export and import are deterministic and bounded in memory; exported records can be verified independently.
+
+# Milestone M4 — Derivatives for optimization
+
+**Goal:** Expose reliable sparse derivatives suitable for NLP/OCP.
+
+- [ ] Generate Jacobian blocks for states, state derivatives, inputs and parameters.
+- [ ] Generate weighted Hessians for vector residuals.
+- [ ] Define sparse ordering and evaluate COO/CSR/CSC backend layouts.
+- [ ] Implement chain-rule propagation across standalone user-function calls.
+- [ ] Require explicit external derivative implementations or supported AD backends.
+- [ ] Verify derivatives against independent reference checks at smooth points.
+
+**Acceptance:** Sparse Jacobian/Hessian values and structures are correct on representative nonlinear models; missing derivatives fail clearly.
+
+# Milestone M5 — Standalone numerical code generation
+
+**Goal:** Export callable C/C++ and MATLAB implementations.
+
+- [ ] Define a stable C ABI with shapes, memory ownership, layout and error reporting.
+- [ ] Generate user functions separately by default and compile/link dependencies.
+- [ ] Add generated derivative functions and sparse structure accessors.
+- [ ] Use bounded CSE, translation-unit partitioning and reproducible build metadata.
+- [ ] Compare generated numerical results against Maple reference evaluations.
+
+**Acceptance:** A model and its standalone user functions compile and pass cross-backend numerical and derivative consistency tests.
+
+# Milestone M6 — Mathematica and integration
+
+**Goal:** Add a second symbolic frontend and demonstrate use in simulation/OCP/MPC.
+
+- [ ] Export equivalent IR and manifest from Mathematica.
+- [ ] Compare both CAS frontends on common reference models.
+- [ ] Provide integration examples for a C++ simulator and an OCP solver.
+- [ ] Package versioned models and parameter sets with provenance.
+
+**Acceptance:** A consumer can load a versioned numerical model without installing a CAS.
+
+# Development discipline
+
+Every completed feature must include source changes, automated tests, a documented usage example, and updated architecture/roadmap entries. Preserve existing behavior where possible; record deliberate breaking changes and schema migrations. Do not mark a milestone complete until its acceptance criteria have been checked in the relevant environment.
+
+# First Codex task
+
+After opening the local repository in Codex, use this initial prompt:
+
+> Inspect `AGENTS.md`, `docs/architecture.qmd`, `docs/development-roadmap.qmd`, and the existing Model-Core source. Run the available Python tests and report their results. Review the Maple prototype for compatibility risks without claiming Maple execution unless Maple is installed. Propose the smallest implementation plan for milestone M1. Do not edit files, commit, or push yet.

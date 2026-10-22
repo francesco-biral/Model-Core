@@ -31,3 +31,13 @@ Model-Core standardizes how symbolic mathematical models are described, validate
 3. Units, coordinate frames and conventions.
 4. Derivative and sparse matrix metadata.
 5. CAS-neutral intermediate representation.
+
+## Living developer guide
+
+See [Model-Core: Architecture and Developer Guide](modelcore-guide.qmd) for design decisions, current commands, Maple examples, scalability considerations, and the development roadmap.
+
+## Project documentation
+
+- [Architecture](architecture.qmd)
+- [Development roadmap](development-roadmap.qmd)
+- [Developer guide](modelcore-guide.qmd)

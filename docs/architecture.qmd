@@ -1,0 +1,195 @@
+---
+title: "Model-Core — Software Architecture"
+subtitle: "Living architectural specification"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-copy: true
+execute:
+  eval: false
+---
+
+> **Status:** Architecture proposal aligned with the v0.2 development prototype. Statements about future behavior describe requirements, not completed implementations. The Maple prototype has not been verified by executing Maple.
+
+# Purpose and boundaries
+
+Model-Core is a framework for describing, exporting, validating, and packaging reusable mathematical models. Models are authored in Maple or Mathematica; consumer applications include simulation, system identification, optimal control problems (OCP), model predictive control (MPC), and real-time execution.
+
+**The symbolic model is authoritative.** The exported public manifest describes the numerical contract, while an intermediate representation (IR) carries exchange metadata and potentially large equation records. Parameter sets, generated numerical code, and experiment-specific objectives remain separate artifacts.
+
+# Layered architecture
+
+```text
+Maple / Mathematica
+  symbolic model + function declarations
+                |
+                v
+     CAS-specific exporters
+                |
+                v
+     Model IR (metadata + chunks)
+                |
+          validate / inspect
+                |
+                +--> public model.yaml
+                +--> standalone function artifacts (planned)
+                +--> generated model code (planned)
+                +--> reference cases and build lockfile (planned)
+                |
+                v
+       C/C++ numerical runtime (planned)
+                |
+     simulation / OCP / MPC / identification
+```
+
+## Component ownership
+
+| Component | Responsibility | Status |
+|---|---|---|
+| `maple/` | First-order Maple model declaration, residual normalization, metadata export | Untested prototype |
+| `mathematica/` | Equivalent CAS frontend | Planned |
+| `schema/model.schema.json` | Public model manifest validation | Implemented baseline |
+| `src/modelcore/validation.py` | Python manifest validation | Implemented baseline |
+| `src/modelcore/cli.py` | Inspect and validate commands | Implemented baseline |
+| `src/modelcore/ir.py` | Streaming JSONL equation chunks with checksums | Implemented transport utility |
+| `src/modelcore/derivatives.py` | Derivative capability declarations | Implemented contracts only |
+| `runtime/` | Stable numerical ABI | Planned |
+
+# Mathematical model semantics
+
+## First-order explicit ODE
+
+$$
+\dot{\mathbf{x}}=\mathbf{f}(t,\mathbf{x},\mathbf{u},\mathbf{p}).
+$$
+
+## First-order implicit ODE
+
+$$
+\mathbf{R}(t,\mathbf{x},\dot{\mathbf{x}},\mathbf{u},\mathbf{p})=\mathbf{0}.
+$$
+
+An explicit equation is also representable as a residual. The exporter must preserve the original equations and their declared variable ordering, and must not automatically solve an implicit system for $\dot{\mathbf{x}}$.
+
+Algebraic components and DAE formulations with algebraic variables $\mathbf{z}$ are future extensions:
+
+$$
+\mathbf{R}(t,\mathbf{x},\dot{\mathbf{x}},\mathbf{z},\mathbf{u},\mathbf{p})=\mathbf{0}.
+$$
+
+## Canonical Maple source convention
+
+```maple
+xvars := [x(t), v(t)]:
+uvars := [F(t)]:
+pvars := [m, k, c]:
+usr_funcs := []:
+ode_eqns := [
+    diff(x(t), t) = v(t),
+    m*diff(v(t), t) + c*v(t) + k*x(t) = F(t)
+]:
+```
+
+The `xvars`, `uvars`, and `pvars` lists are ordered interface declarations. Derivative variables are inferred from `xvars` and the independent time variable. Unknown symbols, duplicate names, malformed signatures, and dimension mismatches should be diagnosed before export.
+
+# User-defined functions
+
+Every user function has a declared interface independent of its implementation: name, ordered arguments, argument shapes, ordered outputs, output shapes, units when known, and derivative capabilities.
+
+| Mode | Symbolic body | External implementation | Default behavior |
+|---|---|---|---|
+| Symbolic | Present | Absent | Generate standalone function |
+| External | Absent | Present | Emit link dependency |
+| Hybrid | Present | Present | Select implementation at build time |
+
+Vector-valued arguments and outputs are mandatory design requirements. For a standalone symbolic function, code generation should preserve the callable interface rather than silently inlining it into the parent model. An explicit build option may allow inlining later.
+
+**Proposed Maple API (not implemented):**
+
+```maple
+UF := UserFunction(
+    name = "TyreForces",
+    arguments = [alpha, kappa, Fz],
+    outputs = [Fx, Fy, Mz],
+    implementation = "symbolic",
+    expressions = [Fx_expr, Fy_expr, Mz_expr]
+):
+```
+
+An external declaration without symbolic expressions must not be treated as differentiable or executable unless corresponding implementations are supplied.
+
+# Derivative design for OCP
+
+For a vector residual $\mathbf R(\mathbf w)$, where $\mathbf w$ may contain states, derivatives, inputs, algebraic variables and parameters, define
+
+$$
+J_R(\mathbf w)=\frac{\partial\mathbf R}{\partial\mathbf w},
+\qquad
+H_R(\mathbf w,\boldsymbol\lambda)
+=\nabla^2_{\mathbf w\mathbf w}\bigl(\boldsymbol\lambda^\mathsf{T}\mathbf R(\mathbf w)\bigr).
+$$
+
+A weighted Hessian is the natural second-order contract for a vector function in sparse NLP methods. First-order derivatives should be represented by sparse blocks with stable row/column ordering. The initial IR convention for sparse coordinate data is zero-based COO; numerical backends may convert to CSR/CSC.
+
+For symbolic user functions, generate analytic derivatives as needed and apply the chain rule through standalone calls. For external functions, require a registered Jacobian and weighted Hessian, or a specifically supported AD-compatible backend. Missing derivative capabilities must cause a clear error for exact-derivative OCP builds; finite differences must never be silently enabled.
+
+**Current implementation:** Python derivative capability checks exist; actual symbolic differentiation, chain-rule composition, sparsity detection, and numerical derivative code generation are not implemented.
+
+# Efficient handling of large models
+
+The framework targets models with thousands of highly nonlinear equations. Avoid full expansion, monolithic JSON dumps, global common-subexpression elimination without memory limits, and dense derivative matrices.
+
+The v0.2 Python IR transport writes equation records as independently addressable JSONL chunks with an index, equation counts and SHA-256 checksums:
+
+```text
+build/
+  equations.index.json
+  equations-000000.jsonl
+  equations-000001.jsonl
+  ...
+```
+
+This transport does **not** yet define a portable symbolic AST, preserve expression DAG sharing across chunks, or provide a compiled code-generation backend. Future work should investigate DAG-based symbolic representation, controlled CSE, sparse block partitioning, incremental builds and multiple translation units. Benchmark memory use and compilation time on representative large models before committing to a particular expression encoding.
+
+# Manifest, parameters and reproducibility
+
+- `model.yaml` is the public interface contract, not the complete CAS source.
+- Numerical parameter sets must be stored separately from parameter definitions and may carry identification provenance and uncertainty.
+- Model, parameter-set, IR schema and backend versions are independent.
+- A future lockfile should capture generator versions, build settings, input hashes and output hashes.
+- Coordinate frames, sign conventions, units, matrix layouts and calling conventions must be explicit before production numerical interfaces are released.
+
+# Repository layout
+
+```text
+Model-Core/
+  AGENTS.md
+  README.md
+  schema/
+  src/modelcore/
+  maple/
+  mathematica/
+  runtime/
+  examples/
+  tests/
+  docs/
+```
+
+# Architecture decision log
+
+| Decision | Rationale |
+|---|---|
+| Maple states and inputs use time-dependent functions | Matches existing scientific workflow |
+| Residual-first ODE normalization | Preserves implicit systems without symbolic inversion |
+| Standalone user functions by default | Enables reuse and separate compilation |
+| Vector-valued signatures | Supports tyre, suspension and multibody interfaces |
+| Explicit derivative contracts | Avoids unverified derivatives in optimization |
+| Sparse weighted Hessians | Suitable for second-order NLP solvers |
+| Chunked IR transport | Bounds Python transport memory for large models |
+| Quarto as living documentation | Keeps architecture and examples near the code |
+
+# Related documentation
+
+See [Developer Guide](modelcore-guide.qmd) for broader design notes and examples, and [Development Roadmap](development-roadmap.qmd) for verified implementation status and upcoming work.
