@@ -1,0 +1,33 @@
+---
+title: "Model-Core: Architecture and Manifest Specification"
+format: html
+---
+
+## Objective
+
+Model-Core standardizes how symbolic mathematical models are described, validated, generated and reused across projects.
+
+## Separation of concerns
+
+- **Symbolic source:** authoritative equations in Maple or Mathematica.
+- **Manifest:** language-neutral interface describing model variables, parameters, functions and derivatives.
+- **Intermediate representation (future):** structured CAS export consumed by shared build tools.
+- **Generated code (future):** numerical implementations with versioned build metadata.
+- **Runtime (future):** stable ABI independent of CAS and Python.
+
+## Model categories
+
+| Category | Mathematical form |
+|---|---|
+| Explicit ODE | $\\dot{x}=f(t,x,u,p)$ |
+| Implicit DAE | $F(t,x,\\dot{x},z,u,p)=0$ |
+| Algebraic | $y=g(u,p)$ |
+| Discrete | $x_{k+1}=f_d(x_k,u_k,p)$ |
+
+## Next design issues
+
+1. Formal parameter sets and provenance.
+2. Function signatures, array shapes and ABI layouts.
+3. Units, coordinate frames and conventions.
+4. Derivative and sparse matrix metadata.
+5. CAS-neutral intermediate representation.

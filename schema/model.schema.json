@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/modelcore/model.schema.json",
+  "title": "ModelCore manifest v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "model", "formulation", "variables", "functions"],
+  "properties": {
+    "schema_version": {"const": "0.1"},
+    "model": {"type": "object", "required": ["id", "version"], "additionalProperties": false, "properties": {"id": {"type": "string", "minLength": 1}, "name": {"type": "string"}, "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"}, "description": {"type": "string"}}},
+    "formulation": {"type": "object", "required": ["type"], "additionalProperties": false, "properties": {"type": {"enum": ["explicit_ode", "implicit_dae", "algebraic", "discrete"]}, "time_domain": {"enum": ["continuous", "discrete", "none"]}}},
+    "variables": {"type": "object", "additionalProperties": false, "properties": {"states": {"$ref": "#/$defs/variables"}, "state_derivatives": {"$ref": "#/$defs/variables"}, "algebraic": {"$ref": "#/$defs/variables"}, "inputs": {"$ref": "#/$defs/variables"}, "outputs": {"$ref": "#/$defs/variables"}}},
+    "parameters": {"$ref": "#/$defs/variables"},
+    "functions": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["name", "arguments", "returns"], "additionalProperties": false, "properties": {"name": {"type": "string", "minLength": 1}, "arguments": {"type": "array", "items": {"type": "string"}}, "returns": {"type": "string"}, "description": {"type": "string"}}}},
+    "derivatives": {"type": "array", "items": {"type": "object", "required": ["function", "with_respect_to", "order", "name"], "additionalProperties": false, "properties": {"function": {"type": "string"}, "with_respect_to": {"type": "string"}, "order": {"type": "integer", "minimum": 1}, "name": {"type": "string"}}}},
+    "conventions": {"type": "object", "additionalProperties": {"type": "string"}},
+    "implementations": {"type": "array", "items": {"type": "object", "required": ["id", "language", "path"], "properties": {"id": {"type": "string"}, "language": {"type": "string"}, "path": {"type": "string"}}, "additionalProperties": true}}
+  },
+  "$defs": {
+    "variables": {"type": "array", "items": {"type": "object", "required": ["name", "unit"], "additionalProperties": false, "properties": {"name": {"type": "string", "minLength": 1}, "unit": {"type": "string"}, "description": {"type": "string"}, "shape": {"type": "array", "items": {"type": "integer", "minimum": 1}}, "default": {"type": "number"}}}}
+  }
+}

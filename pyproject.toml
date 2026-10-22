@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "model-core"
+version = "0.1.0"
+description = "Portable mathematical model manifests and validation"
+requires-python = ">=3.10"
+dependencies = ["jsonschema>=4.18", "PyYAML>=6.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+modelcore = "modelcore.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

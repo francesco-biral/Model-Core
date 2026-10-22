@@ -1,0 +1,31 @@
+schema_version: '0.1'
+model:
+  id: vehicle.bicycle.nonlinear
+  name: Nonlinear bicycle model
+  version: 0.1.0
+formulation:
+  type: explicit_ode
+  time_domain: continuous
+variables:
+  states:
+    - {name: vx, unit: m/s}
+    - {name: vy, unit: m/s}
+    - {name: r, unit: rad/s}
+  inputs:
+    - {name: delta, unit: rad}
+    - {name: Fx, unit: N}
+  outputs:
+    - {name: ay, unit: m/s^2}
+parameters:
+  - {name: m, unit: kg}
+  - {name: Iz, unit: kg*m^2}
+  - {name: a, unit: m}
+  - {name: b, unit: m}
+functions:
+  - {name: dynamics, arguments: [t, x, u, p], returns: xdot}
+  - {name: outputs, arguments: [t, x, u, p], returns: y}
+derivatives:
+  - {function: dynamics, with_respect_to: states, order: 1, name: jacobian_x}
+conventions:
+  body_frame: x forward, y left, z up
+  yaw: positive counterclockwise viewed from above

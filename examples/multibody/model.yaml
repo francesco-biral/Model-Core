@@ -1,0 +1,30 @@
+schema_version: '0.1'
+model:
+  id: multibody.pendulum.constraint
+  name: Constrained pendulum DAE
+  version: 0.1.0
+formulation:
+  type: implicit_dae
+  time_domain: continuous
+variables:
+  states:
+    - {name: x, unit: m}
+    - {name: y, unit: m}
+    - {name: vx, unit: m/s}
+    - {name: vy, unit: m/s}
+  state_derivatives:
+    - {name: dx, unit: m/s}
+    - {name: dy, unit: m/s}
+    - {name: dvx, unit: m/s^2}
+    - {name: dvy, unit: m/s^2}
+  algebraic:
+    - {name: lambda, unit: N/m}
+parameters:
+  - {name: mass, unit: kg}
+  - {name: length, unit: m}
+  - {name: gravity, unit: m/s^2}
+functions:
+  - {name: residual, arguments: [t, x, xdot, z, p], returns: residual}
+derivatives:
+  - {function: residual, with_respect_to: states, order: 1, name: jacobian_x}
+  - {function: residual, with_respect_to: state_derivatives, order: 1, name: jacobian_xdot}

@@ -1,0 +1,22 @@
+schema_version: '0.1'
+model:
+  id: tyre.brush.steady
+  name: Steady brush tyre model
+  version: 0.1.0
+formulation:
+  type: algebraic
+  time_domain: none
+variables:
+  inputs:
+    - {name: kappa, unit: '1'}
+    - {name: alpha, unit: rad}
+    - {name: Fz, unit: N}
+  outputs:
+    - {name: Fx, unit: N}
+    - {name: Fy, unit: N}
+parameters:
+  - {name: mu, unit: '1'}
+  - {name: Cx, unit: N}
+  - {name: Cy, unit: N/rad}
+functions:
+  - {name: forces, arguments: [u, p], returns: y}
